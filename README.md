@@ -1,6 +1,6 @@
 # FinAdvisor — Personalized Financial Advisor using LLM
 
-Capstone project: a personalized financial guidance assistant built on an open-weights LLM (Llama-3.1-8B-Instruct via Hugging Face Inference Providers), grounded with retrieval-augmented generation over financial-education sources and live Alpha Vantage market data.
+Capstone project: a personalized financial guidance assistant built on an open-weights LLM (Llama-3.1-8B-Instruct via Hugging Face Inference Providers), grounded with retrieval-augmented generation (RAG) and a **multi-agent architecture** for specialized financial domains.
 
 ## What it does
 
@@ -14,7 +14,30 @@ Every advisory response carries a disclaimer and source/tool citations.
 
 ## Architecture
 
-User → Streamlit UI → ReAct Agent (Llama-3.1-8B) → tools (Alpha Vantage + calculators + profile) and RAG (Chroma + BM25 hybrid) → safety wrap → response.
+### High-Level Flow
+
+```
+User Query → Intent Classification → Specialized Agents (1 or more)
+    ↓
+[Risk Profiling | Market Intelligence | Portfolio Analysis | Goal Planning]
+    ↓
+RAG (Chroma + BM25) + LLM (Llama-3.1-8B) + Tools (Alpha Vantage + Calculators)
+    ↓
+Safety Guardrails → Response
+```
+
+### Multi-Agent System
+
+FinAdvisor uses a **specialized multi-agent architecture** where different financial domains are handled by dedicated agents:
+
+| Agent | Responsibility | Tools | Use Case |
+|-------|---|---|---|
+| **Risk Profiling** | Asset allocation, risk assessment, emergency funds | `asset_allocation`, `emergency_fund` | "What allocation for my age?" |
+| **Market Intelligence** | Live quotes, sector trends, currency rates | `get_stock_quote`, `get_sector_performance`, `get_fx_rate` | "What's AAPL's price?" |
+| **Portfolio Analysis** | Holdings evaluation, technicals, news sentiment | `get_company_overview`, `get_news_sentiment`, `get_technical_indicator` | "Analyze my portfolio" |
+| **Goal Planning** | Retirement, savings targets, debt payoff | `retirement_projection`, `savings_goal`, `debt_payoff` | "Can I retire at 60?" |
+
+**Intent Classification** (keyword + pattern matching) automatically routes queries to the appropriate agent(s). See [Architecture & Request Pipeline](Architecture%20&%20Request%20Pipeline.md) for details.
 
 
 ## Quickstart
@@ -43,14 +66,46 @@ make run
 ## Project layout
 
 ```
-financial-advisor-llm/
-├── src/advisor/        # Library code (config, llm, tools, rag, agent, eval)
-├── app/                # Streamlit UI (entry + 4 pages)
-├── corpus/             # Source documents for RAG
-├── data/               # Caches, vector DB, profile DB (gitignored)
-├── notebooks/          # Exploratory notebooks
-├── scripts/            # CLI entry points
-└── tests/              # pytest suite
+FinAdvisor/
+├── src/advisor/
+│   ├── agents/                    ← Specialized agent modules
+│   │   ├── __init__.py
+│   │   ├── base.py                (BaseAgent interface)
+│   │   ├── risk_profiling/        (asset allocation, risk metrics)
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py
+│   │   │   ├── tools.py
+│   │   │   └── prompts.py
+│   │   ├── market_intelligence/   (quotes, sectors, FX)
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py
+│   │   │   ├── tools.py
+│   │   │   └── prompts.py
+│   │   ├── portfolio_analysis/    (holdings, technicals, sentiment)
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py
+│   │   │   ├── tools.py
+│   │   │   └── prompts.py
+│   │   └── goal_planning/         (retirement, savings, debt payoff)
+│   │       ├── __init__.py
+│   │       ├── agent.py
+│   │       ├── tools.py
+│   │       └── prompts.py
+│   ├── intent/                    ← Intent classifier for routing
+│   │   ├── __init__.py
+│   │   └── classifier.py          (keyword + pattern matching)
+│   ├── config.py                  (Settings ← .env)
+│   ├── llm/                       (LLM client + prompts)
+│   ├── tools/                     (Generic tool implementations)
+│   ├── rag/                       (RAG retrieval + storage)
+│   ├── agent/                     (Orchestrator, memory, safety)
+│   └── eval/                      (Evaluation framework)
+├── app/                           (Streamlit UI + 4 pages)
+├── corpus/                        (Source documents for RAG)
+├── data/                          (Caches, vector DB, profile DB — gitignored)
+├── notebooks/                     (Exploratory notebooks)
+├── scripts/                       (CLI entry points)
+└── tests/                         (pytest suite)
 ```
 
 ## Common commands
